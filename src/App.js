@@ -14,11 +14,12 @@ const theme = extendTheme({
 	}
 })
 
+
 const App = () => {
 	return (
 		<QueryClientProvider client={queryClient}>
 			<ChakraProvider theme={theme}>
-				<BrowserRouter>
+				<BrowserRouter basename={`${process.env.PUBLIC_URL}/`}>
 					<Routes>
 						<Route path='/' element={<Dashboard/>}/>
 						<Route path='/:address' element={<Address/>}/>
