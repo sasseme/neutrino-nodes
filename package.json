@@ -1,6 +1,5 @@
 {
   "name": "neutrino-nodes-dashboard",
-  "homepage": "http://sasseme.github.io/neutrino-nodes",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
