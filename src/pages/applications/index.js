@@ -1,11 +1,11 @@
 import { create } from '@waves/node-api-js'
 import { useQuery } from 'react-query'
-import { differenceInMilliseconds, compareAsc, format, formatDuration, intervalToDuration } from 'date-fns'
+import { differenceInMilliseconds, compareAsc, format, intervalToDuration, minutesToMilliseconds } from 'date-fns'
 import { Icon, TableContainer, Thead, Td, Th, Tbody, Tr, Table, Box, Text, SimpleGrid, Stat, StatLabel, StatNumber, VStack, StackDivider, LinkBox, LinkOverlay } from '@chakra-ui/react'
 import { useMemo } from 'react'
 import { useTable, useSortBy } from 'react-table'
 import { TriangleDownIcon, TriangleUpIcon } from '@chakra-ui/icons'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 
 const AVAILABLE_SPOTS = 80
 
@@ -27,23 +27,8 @@ const dateSort = (a, b, id, desc) => {
 	}
 }
 
-const intervalSort = (a, b, id, desc) => {
-	const intervalA = a.original.waitTimeDiff
-	const intervalB = b.original.waitTimeDiff
-	if(intervalA && intervalB) {
-		return intervalA > intervalB ? 1 : (intervalB > intervalA ? -1 : 0)
-	} else if(intervalA) {
-		return 1
-	} else if(intervalB) {
-		return -1
-	} else {
-		return 0
-	}
-}
-
-const Dashboard = () => {
-    const navigate = useNavigate()
-	const { isLoading, error, data=[] } = useQuery('applicants', async () => {
+const Applications = () => {
+	const { error, data=[] } = useQuery('applicants', async () => {
 		const data = await api.addresses.data('3P9vKqQKjUdmpXAfiWau8krREYAY1Xr69pE', { matches: encodeURIComponent('^%s__\\w+$') })
 		const applications = data.map(d => {
 			const address = d.key.split('__')[1]
@@ -51,11 +36,13 @@ const Dashboard = () => {
 			const info = {
 				address,
 				applicationDate: new Date(parseInt(config[3])),
-				status: 'Pending'
+				status: 'Pending',
+                isApproved: false
 			}
 			if(config.length > 6) {
 				if(config[6] === 'APPROVED') {
 					info.status = 'Approved'
+                    info.isApproved = true
 					info.approvalDate = new Date(parseInt(config[8]))
 					info.waitTime = intervalToDuration({
 						start: info.applicationDate,
@@ -68,14 +55,14 @@ const Dashboard = () => {
 		})
         applications.sort((a, b) => compareAsc(a.applicationDate, b.applicationDate))
         return applications
-	})
+	}, { staleTime: minutesToMilliseconds(30) })
 
 	const memoData = useMemo(() => {
 		return data
 	}, [data])
 
     const numApproved = useMemo(() => {
-        return data?.filter(d => d.status === 'Approved')?.length
+        return data?.filter(d => d.isApproved)?.length
     }, [data])
 
 	const columns = useMemo(() => {
@@ -84,13 +71,10 @@ const Dashboard = () => {
 			{ Header: 'Application Date', sortType: dateSort, accessor: 'applicationDate', Cell: ({ value }) => format(value, 'yyyy-MM-dd, HH:mm') },
 			{ Header: 'Status', accessor: 'status' },
 			{ Header: 'Approval Date', sortType: dateSort , accessor: 'approvalDate', Cell: ({ value }) => value ? format(value, 'yyyy-MM-dd, HH:mm') : 'N/A' },
-			{ Header: 'Wait Time', sortType: intervalSort, accessor: 'waitTime', Cell: ({ value }) => value ? formatDuration(value, { format: ['days', 'hours'] }) : 'N/A' }
 		]
 	}, [])
 	
 	const {
-		getTableProps,
-		getTableBodyProps,
 		headerGroups,
 		rows,
 		prepareRow
@@ -149,8 +133,13 @@ const Dashboard = () => {
                                 (row, i) => {
                                     prepareRow(row)
                                     return (
-                                        <LinkBox as={Tr} _hover={{ bgColor: 'gray.100', cursor: 'pointer' }}>
-                                            <Td><LinkOverlay as={Link} to={`/${row.original.address}`}>{parseInt(row.id) + 1}</LinkOverlay></Td>
+                                        <LinkBox as={Tr} _hover={row.original.isApproved ? { bgColor: 'gray.100', cursor: 'pointer' } : null}>
+                                            <Td>
+                                                {row.original.isApproved ?
+                                                    <LinkOverlay as={Link} to={`/nodes/${row.original.address}`}>{parseInt(row.id) + 1}</LinkOverlay>:
+                                                    <span>{parseInt(row.id) + 1}</span>
+                                                }
+                                            </Td>
                                             {row.cells.map(cell => (
                                                 <Td>{cell.render('Cell')}</Td>
                                             ))}
@@ -166,4 +155,4 @@ const Dashboard = () => {
 	)
 }
 
-export default Dashboard
+export default Applications
