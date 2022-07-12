@@ -6,6 +6,7 @@ import Address from './pages/address'
 import Nodes from './pages/nodes'
 import Distributions from './pages/distributors'
 import Layout from './components/Layout'
+import NotFound from './components/NotFound'
 
 const queryClient = new QueryClient()
 
@@ -22,7 +23,7 @@ const App = () => {
 	return (
 		<QueryClientProvider client={queryClient}>
 			<ChakraProvider theme={theme}>
-				<BrowserRouter>
+				<BrowserRouter basename={`${process.env.PUBLIC_URL}/`}>
 					<Routes>
 						<Route path='/' element={<Layout/>}>
 							<Route index element={<Navigate to='/nodes' replace/>}/>
@@ -30,8 +31,8 @@ const App = () => {
 							<Route path='/distributions' element={<Distributions/>}/>
 							<Route path='/applicants' element={<Applications/>}/>
 							<Route path='/nodes/:address' element={<Address/>}/>
+							<Route path='*' element={<NotFound/>}/>
 						</Route>
-						
 					</Routes>
 				</BrowserRouter>
 			</ChakraProvider>

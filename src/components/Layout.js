@@ -1,4 +1,4 @@
-import { Box, Container, Flex, Text, useColorModeValue } from "@chakra-ui/react"
+import { Box, Container, Flex, Text } from "@chakra-ui/react"
 import { NavLink, Outlet } from "react-router-dom"
 
 const Layout = () => {
