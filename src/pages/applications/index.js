@@ -29,7 +29,7 @@ const dateSort = (a, b, id, desc) => {
 
 const Applications = () => {
 	const { error, data } = useQuery('applicants', async () => {
-		const data = await api.addresses.data('3P9vKqQKjUdmpXAfiWau8krREYAY1Xr69pE', { matches: encodeURIComponent('^%s__\\w+$') })
+		const data = await api.addresses.data('3P9vKqQKjUdmpXAfiWau8krREYAY1Xr69pE', { matches: encodeURIComponent('^%s__3P\\w+$') })
 		const applications = data.map(d => {
 			const address = d.key.split('__')[1]
 			const config = d.value.split('__')
