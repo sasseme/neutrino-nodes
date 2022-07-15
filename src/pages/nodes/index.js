@@ -7,7 +7,7 @@ import { TriangleDownIcon, TriangleUpIcon } from '@chakra-ui/icons'
 import { Link } from 'react-router-dom'
 import _ from 'lodash'
 import BigNumber from 'bignumber.js'
-import { minutesToMilliseconds } from 'date-fns'
+import { format, minutesToMilliseconds } from 'date-fns'
 
 const toDisplay = (num) => {
     return new BigNumber(num).div(Math.pow(10, 8)).toNumber()
@@ -16,7 +16,7 @@ const toDisplay = (num) => {
 const api = create('https://nodes.wavesnodes.com')
 
 const Nodes = () => {
-	const { error, data=[] } = useQuery('nodes', async () => {
+	const { error, data } = useQuery('nodes', async () => {
 
         const [amountsData, totalsData, groups] = await Promise.all([
             api.addresses.data('3PC9BfRwJWWiw9AREE2B3eWzCks3CYtg4yo', { matches: encodeURIComponent(`^%s%s%s__leaseByAddress__\\w+__amount$`) }),
@@ -54,21 +54,24 @@ const Nodes = () => {
                 address,
                 groupId: groupIds[address],
                 leaseAmount: amounts[address],
-                ...totals[address]
+                ...totals[address],
             }
         })
 
-        return nodes
-	}, { staleTime: minutesToMilliseconds(30) })
+        return {
+            nodes,
+            current: Date.now()
+        }
+	}, { staleTime: minutesToMilliseconds(30), refetchInterval: minutesToMilliseconds(10) })
 
 	const memoData = useMemo(() => {
-		return data
+		return data?.nodes || []
 	}, [data])
 
 	const columns = useMemo(() => {
 		return [
             { Header: 'Group Id', accessor: 'groupId' },
-			{ Header: 'Address', accessor: 'address', disableSortBy: true },
+			{ Header: 'Node', accessor: 'address', disableSortBy: true },
             { Header: 'Lease Amount', accessor: 'leaseAmount', Cell: ({ value }) => toDisplay(value) },
             { Header: 'Total Mined', accessor: 'totalMined', Cell: ({ value }) => toDisplay(value) },
             { Header: 'Owner Commission', accessor: 'commission', Cell: ({ value }) => toDisplay(value) },
@@ -87,9 +90,10 @@ const Nodes = () => {
                 <Box>
                     <Text fontSize='2xl' as='h1' fontWeight='semibold' mb={3}>Nodes</Text>
                     {error && <Text>Could not load data</Text>}
-                    {(!error && data.length === 0) && <Text>Loading...</Text>}
+                    {(!error && memoData.length === 0) && <Text>Loading...</Text>}
+                    {data && <Text>As of {format(data.current, 'yyyy-MM-dd, HH:mm')}</Text>}
                 </Box>
-                {data.length > 0 &&
+                {memoData.length > 0 &&
                     <TableContainer>
                         <Table variant='simple'>
                             <Thead>

@@ -58,7 +58,7 @@ const Distributions = () => {
             numDistributions,
             distributors,
             distributions,
-            current
+            current: distributions[0].date
         }
 	}, { refetchInterval: minutesToMilliseconds(10), staleTime: minutesToMilliseconds(30) })
 
@@ -69,20 +69,22 @@ const Distributions = () => {
                 <Box>
                     <Text fontSize='2xl' as='h1' fontWeight='semibold' mb={3}>Distribution Stats (Past 24 Hours)</Text>
                     {error && <Text>Could not load data</Text>}
-                    {data && <Text>As of {format(data.current, 'yyyy-MM-dd, HH:mm')}</Text>}
+                    {data && 
+                        <>
+                            <Text>As of {format(data.current, 'yyyy-MM-dd, HH:mm')}</Text>
+                            <SimpleGrid columns={[1, null, 4]} spacing={[1, null, 5]} mt={2}>
+                                <Stat>
+                                    <StatLabel>Total Waves Distributed</StatLabel>
+                                    <StatNumber fontSize={statFont}>{_.reduce(data.distributions, (total, current) => total.plus(current.amount), new BigNumber(0)).toNumber()}</StatNumber>
+                                </Stat>
+                                <Stat>
+                                    <StatLabel># Distributions</StatLabel>
+                                    <StatNumber fontSize={statFont}>{data.numDistributions}</StatNumber>
+                                </Stat>
+                            </SimpleGrid>
+                        </>
+                    }
                 </Box>
-                {data &&
-                    <SimpleGrid columns={[1, null, 2]} spacing={[1, null, 5]}>
-                        <Stat>
-                            <StatLabel># Distributions</StatLabel>
-                            <StatNumber fontSize={statFont}>{data.numDistributions}</StatNumber>
-                        </Stat>
-                        <Stat>
-                            <StatLabel>Waves Distributed</StatLabel>
-                            <StatNumber fontSize={statFont}>{_.reduce(data.distributions, (total, current) => total.plus(current.amount), new BigNumber(0)).toNumber()}</StatNumber>
-                        </Stat>
-                    </SimpleGrid>
-                }
                 {data &&
                     <Tabs>
                         <TabList>

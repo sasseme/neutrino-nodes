@@ -28,7 +28,7 @@ const dateSort = (a, b, id, desc) => {
 }
 
 const Applications = () => {
-	const { error, data=[] } = useQuery('applicants', async () => {
+	const { error, data } = useQuery('applicants', async () => {
 		const data = await api.addresses.data('3P9vKqQKjUdmpXAfiWau8krREYAY1Xr69pE', { matches: encodeURIComponent('^%s__\\w+$') })
 		const applications = data.map(d => {
 			const address = d.key.split('__')[1]
@@ -54,15 +54,18 @@ const Applications = () => {
 			return info
 		})
         applications.sort((a, b) => compareAsc(a.applicationDate, b.applicationDate))
-        return applications
-	}, { staleTime: minutesToMilliseconds(30) })
+        return {
+            applications,
+            current: Date.now()
+        }
+	}, { staleTime: minutesToMilliseconds(30), refetchInterval: minutesToMilliseconds(10) })
 
 	const memoData = useMemo(() => {
-		return data
+		return data?.applications || []
 	}, [data])
 
     const numApproved = useMemo(() => {
-        return data?.filter(d => d.isApproved)?.length
+        return data?.applications?.filter(d => d.isApproved)?.length
     }, [data])
 
 	const columns = useMemo(() => {
@@ -86,11 +89,12 @@ const Applications = () => {
                 <Box>
                     <Text fontSize='2xl' as='h1' fontWeight='semibold' mb={3}>Applicants</Text>
                     {error && <Text>Could not load data</Text>}
-                    {data.length > 0 &&
-                        <SimpleGrid columns={[1, null, 4]} spacing={[1, null, 5]}>
+                    {data && <Text>As of {format(data.current, 'yyyy-MM-dd, HH:mm')}</Text>}
+                    {memoData.length > 0 &&
+                        <SimpleGrid columns={[1, null, 4]} spacing={[1, null, 5]} mt={2}>
                             <Stat>
                                 <StatLabel>Total Applicants</StatLabel>
-                                <StatNumber fontSize={statFont}>{data.length}</StatNumber>
+                                <StatNumber fontSize={statFont}>{memoData.length}</StatNumber>
                             </Stat>
                             <Stat>
                                 <StatLabel>Approved Nodes</StatLabel>
@@ -102,54 +106,56 @@ const Applications = () => {
                             </Stat>
                             <Stat>
                                 <StatLabel>Acceptance Chance</StatLabel>
-                                <StatNumber fontSize={statFont}>{Math.round((AVAILABLE_SPOTS - numApproved) / (data.length - numApproved) * 100)}%</StatNumber>
+                                <StatNumber fontSize={statFont}>{Math.round((AVAILABLE_SPOTS - numApproved) / (memoData.length - numApproved) * 100)}%</StatNumber>
                             </Stat>
                         </SimpleGrid>
                     }
                 </Box>
-                <TableContainer>
-                    <Table variant='simple'>
-                        <Thead>
-                            {headerGroups.map(headerGroup => (
-                                <Tr>
-                                    <Th>#</Th>
-                                    {headerGroup.headers.map(column => (
-                                        <Th {...column.getHeaderProps(column.getSortByToggleProps())}>
-                                            {column.render('Header')}
-                                            <span>
-                                                {column.isSorted
-                                                ? column.isSortedDesc
-                                                    ? <Icon ml={2} as={TriangleDownIcon}/>
-                                                    : <Icon ml={2} as={TriangleUpIcon}/>
-                                                : ''}
-                                            </span>
-                                        </Th>
-                                    ))}
-                                </Tr>
-                            ))}
-                        </Thead>
-                        <Tbody>
-                            {rows.map(
-                                (row, i) => {
-                                    prepareRow(row)
-                                    return (
-                                        <LinkBox as={Tr} _hover={row.original.isApproved ? { bgColor: 'gray.100', cursor: 'pointer' } : null}>
-                                            <Td>
-                                                {row.original.isApproved ?
-                                                    <LinkOverlay as={Link} to={`/nodes/${row.original.address}`}>{parseInt(row.id) + 1}</LinkOverlay>:
-                                                    <span>{parseInt(row.id) + 1}</span>
-                                                }
-                                            </Td>
-                                            {row.cells.map(cell => (
-                                                <Td>{cell.render('Cell')}</Td>
-                                            ))}
-                                        </LinkBox>
-                                    )
-                                }
-                            )}
-                        </Tbody>
-                    </Table>
-                </TableContainer>
+                {data && 
+                    <TableContainer>
+                        <Table variant='simple'>
+                            <Thead>
+                                {headerGroups.map(headerGroup => (
+                                    <Tr>
+                                        <Th>#</Th>
+                                        {headerGroup.headers.map(column => (
+                                            <Th {...column.getHeaderProps(column.getSortByToggleProps())}>
+                                                {column.render('Header')}
+                                                <span>
+                                                    {column.isSorted
+                                                    ? column.isSortedDesc
+                                                        ? <Icon ml={2} as={TriangleDownIcon}/>
+                                                        : <Icon ml={2} as={TriangleUpIcon}/>
+                                                    : ''}
+                                                </span>
+                                            </Th>
+                                        ))}
+                                    </Tr>
+                                ))}
+                            </Thead>
+                            <Tbody>
+                                {rows.map(
+                                    (row, i) => {
+                                        prepareRow(row)
+                                        return (
+                                            <LinkBox as={Tr} _hover={row.original.isApproved ? { bgColor: 'gray.100', cursor: 'pointer' } : null}>
+                                                <Td>
+                                                    {row.original.isApproved ?
+                                                        <LinkOverlay as={Link} to={`/nodes/${row.original.address}`}>{parseInt(row.id) + 1}</LinkOverlay>:
+                                                        <span>{parseInt(row.id) + 1}</span>
+                                                    }
+                                                </Td>
+                                                {row.cells.map(cell => (
+                                                    <Td>{cell.render('Cell')}</Td>
+                                                ))}
+                                            </LinkBox>
+                                        )
+                                    }
+                                )}
+                            </Tbody>
+                        </Table>
+                    </TableContainer>
+                }
             </VStack>
 		</>
 	)

@@ -8,6 +8,7 @@ const Layout = () => {
                 <Container py={4}>
                     <Flex direction='row' width='full' spacing="8" justifyContent='space-between'>
                         <NavLink to='/nodes'><Text textDecoration='underline'>Nodes</Text></NavLink>
+                        <NavLink to='/mining'><Text textDecoration='underline'>Mining</Text></NavLink>
                         <NavLink to='/distributions'><Text textDecoration='underline'>Distributions</Text></NavLink>
                         <NavLink to='/applicants'><Text textDecoration='underline'>Applicants</Text></NavLink>
                     </Flex>

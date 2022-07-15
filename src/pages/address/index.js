@@ -18,14 +18,16 @@ const statFont = ['md', null, '2xl']
 const Address = () => {
     const { address } = useParams()
 	const { error, data } = useQuery(['addressDetails', address], async () => {
-        const [totals, application, balance] = await Promise.all([
+        const [totals, application, balance, beneficiaryAddress] = await Promise.all([
             api.addresses.fetchDataKey('3P9vKqQKjUdmpXAfiWau8krREYAY1Xr69pE', `%s%s__totals__${address}`).catch(e => e),
             api.addresses.fetchDataKey('3P9vKqQKjUdmpXAfiWau8krREYAY1Xr69pE', `%s__${address}`).catch(e => e),
             api.addresses.fetchBalanceDetails(address).catch(e => e),
+            api.addresses.fetchDataKey(address, '%s%s__cfg__beneficiaryAddress').then(d => d.value).catch(e => null)
         ])
 
         const stats = {
-            status: 'Pending'
+            status: 'Pending',
+            beneficiaryAddress
         }
 
         if(application.error) {
@@ -93,6 +95,7 @@ const Address = () => {
             <Box>
                 <Text fontSize='2xl' as='h1' fontWeight='semibold'>Node Details</Text>
                 <Link href={`https://wavesexplorer.com/address/${address}`} isExternal>{address} <Icon as={ExternalLinkIcon}/></Link>
+                {data?.stats?.beneficiaryAddress && <Text mt={2} fontSize='sm'>Current Beneficiary Address: <Link href={`https://wavesexplorer.com/address/${data.stats.beneficiaryAddress}`} isExternal>{data.stats.beneficiaryAddress} <Icon as={ExternalLinkIcon}/></Link></Text>}
             </Box>
             {error && <Text>Could not load data</Text>}
             {data &&

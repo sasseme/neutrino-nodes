@@ -7,6 +7,7 @@ import Nodes from './pages/nodes'
 import Distributions from './pages/distributors'
 import Layout from './components/Layout'
 import NotFound from './components/NotFound'
+import Mining from './pages/mining'
 
 const queryClient = new QueryClient()
 
@@ -28,6 +29,7 @@ const App = () => {
 						<Route path='/' element={<Layout/>}>
 							<Route index element={<Navigate to='/nodes' replace/>}/>
 							<Route path='/nodes' element={<Nodes/>}/>
+							<Route path='/mining' element={<Mining/>}/>
 							<Route path='/distributions' element={<Distributions/>}/>
 							<Route path='/applicants' element={<Applications/>}/>
 							<Route path='/nodes/:address' element={<Address/>}/>
