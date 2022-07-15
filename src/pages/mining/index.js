@@ -76,7 +76,7 @@ const Mining = () => {
             addressData,
             totalAddresses: addresses.size,
             totalWithBlock: addressData.length,
-            current: headers[0].timestamp
+            current: Date.now()
         }
 	}, { staleTime: minutesToMilliseconds(30), refetchInterval: minutesToMilliseconds(10) })
 
@@ -98,7 +98,7 @@ const Mining = () => {
 		headerGroups,
 		rows,
 		prepareRow
-	} = useTable({ columns, data: memoData, autoResetSortBy: false, initialState: { sortBy: [{ id: 'numBlocks', desc: true }]} }, useSortBy)
+	} = useTable({ columns, data: memoData, autoResetSortBy: false, initialState: { sortBy: [{ id: 'totalMined', desc: true }]} }, useSortBy)
 
 	return (
 		<>

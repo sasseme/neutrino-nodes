@@ -58,7 +58,7 @@ const Distributions = () => {
             numDistributions,
             distributors,
             distributions,
-            current: distributions[0].date
+            current
         }
 	}, { refetchInterval: minutesToMilliseconds(10), staleTime: minutesToMilliseconds(30) })
 
