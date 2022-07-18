@@ -73,7 +73,7 @@ const Nodes = () => {
             { Header: 'Group Id', accessor: 'groupId' },
 			{ Header: 'Node', accessor: 'address', disableSortBy: true },
             { Header: 'Lease Amount', accessor: 'leaseAmount', Cell: ({ value }) => toDisplay(value) },
-            { Header: 'Total Mined', accessor: 'totalMined', Cell: ({ value }) => toDisplay(value) },
+            { Header: 'Waves Distributed', accessor: 'totalMined', Cell: ({ value }) => toDisplay(value) },
             { Header: 'Owner Commission', accessor: 'commission', Cell: ({ value }) => toDisplay(value) },
 		]
 	}, [])
