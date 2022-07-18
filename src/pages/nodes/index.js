@@ -54,7 +54,7 @@ const Nodes = () => {
                 address,
                 groupId: groupIds[address],
                 leaseAmount: amounts[address],
-                ...totals[address],
+                ...totals[address] || { totalMined: 0, commission: 0, protocol: 0 },
             }
         })
 
