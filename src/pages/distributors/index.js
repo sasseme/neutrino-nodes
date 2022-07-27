@@ -43,6 +43,17 @@ const Distributions = () => {
             hasMore = !res.data.isLastPage
         }
 
+        const txIdKeys = distributions.map(d => `%s%s%s__history__${d.node}__${d.txId}`)
+        const realTimes = await axios.post('https://nodes.wavesnodes.com/addresses/data/3P9vKqQKjUdmpXAfiWau8krREYAY1Xr69pE', {
+            keys: txIdKeys
+        }).then(res => {
+            return _.mapValues(_.keyBy(res.data, (data) => data.key.split('__')[3]), (data) => parseInt(data.value.split('__')[2]))
+        })
+        
+        distributions.forEach(dist => {
+            dist.date = realTimes[dist.txId]
+        })
+
         const numDistributions = distributions.length
         const distributorCounts = _.mapValues(_.groupBy(distributions, 'distributor'), 'length')
         const distributors = _.orderBy(_.toPairs(distributorCounts).map(([address, count]) => {
@@ -69,6 +80,7 @@ const Distributions = () => {
                 <Box>
                     <Text fontSize='2xl' as='h1' fontWeight='semibold' mb={3}>Distribution Stats (Past 24 Hours)</Text>
                     {error && <Text>Could not load data</Text>}
+                    {(!error && !data) && <Text>Loading...</Text>}
                     {data && 
                         <>
                             <Text>As of {format(data.current, 'yyyy-MM-dd, HH:mm')}</Text>

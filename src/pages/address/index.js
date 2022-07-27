@@ -1,11 +1,12 @@
 import { create } from '@waves/node-api-js'
 import { useQuery } from 'react-query'
 import { format, minutesToMilliseconds } from 'date-fns'
-import { Box, Text, VStack, SimpleGrid, Stat, StatNumber, StatLabel, StackDivider, Link, Icon, HStack, StatHelpText } from '@chakra-ui/react'
+import { Box, Text, VStack, SimpleGrid, Stat, StatNumber, StatLabel, StackDivider, Link, Icon, TableContainer, Table, Thead, Tr, Th, Tbody, Td, LinkBox, LinkOverlay } from '@chakra-ui/react'
 import { useParams } from 'react-router-dom'
 import BigNumber from 'bignumber.js'
 import { ExternalLinkIcon } from '@chakra-ui/icons'
 import axios from 'axios'
+import _ from 'lodash'
 
 const api = create('https://nodes.wavesnodes.com')
 
@@ -18,9 +19,10 @@ const statFont = ['md', null, '2xl']
 const Address = () => {
     const { address } = useParams()
 	const { error, data } = useQuery(['addressDetails', address], async () => {
-        const [totals, application, balance, beneficiaryAddress] = await Promise.all([
+        const [totals, application, leasedAmount, balance, beneficiaryAddress] = await Promise.all([
             api.addresses.fetchDataKey('3P9vKqQKjUdmpXAfiWau8krREYAY1Xr69pE', `%s%s__totals__${address}`).catch(e => e),
             api.addresses.fetchDataKey('3P9vKqQKjUdmpXAfiWau8krREYAY1Xr69pE', `%s__${address}`).catch(e => e),
+            api.addresses.fetchDataKey('3PC9BfRwJWWiw9AREE2B3eWzCks3CYtg4yo', `%s%s%s__leaseByAddress__${address}__amount`).catch(e => e),
             api.addresses.fetchBalanceDetails(address).catch(e => e),
             api.addresses.fetchDataKey(address, '%s%s__cfg__beneficiaryAddress').then(d => d.value).catch(e => null)
         ])
@@ -45,12 +47,21 @@ const Address = () => {
 			}
         }
 
-        if(balance.error) {
-            stats.leasedBalance = 0
-            stats.availableBalance = 0
+        if(leasedAmount.error) {
+            if(balance.error) {
+                stats.leasedBalance = 0
+                stats.availableBalance = 0
+            } else {
+                stats.leasedBalance = balance.effective - balance.available
+                stats.availableBalance = balance.available
+            }
         } else {
-            stats.leasedBalance = balance.effective - balance.available
-            stats.availableBalance = balance.available
+            stats.leasedBalance = leasedAmount.value
+            if(balance.error) {
+                stats.availableBalance = 0
+            } else {
+                stats.availableBalance = balance.available
+            }
         }
 
         if(totals.error) {
@@ -79,9 +90,21 @@ const Address = () => {
                     txId: tx.id,
                     block: tx.height,
                     date: Date.parse(tx.timestamp),
-                    totalAmount: tx.payment[0].amount
+                    totalAmount: tx.payment[0].amount,
+                    distributor: tx.call.args[0].value
                 }
             })
+        })
+
+        const txIdKeys = distributions.map(d => `%s%s%s__history__${address}__${d.txId}`)
+        const realTimes = await axios.post('https://nodes.wavesnodes.com/addresses/data/3P9vKqQKjUdmpXAfiWau8krREYAY1Xr69pE', {
+            keys: txIdKeys
+        }).then(res => {
+            return _.mapValues(_.keyBy(res.data, (data) => data.key.split('__')[3]), (data) => parseInt(data.value.split('__')[2]))
+        })
+        
+        distributions.forEach(dist => {
+            dist.date = realTimes[dist.txId]
         })
         
         return {
@@ -126,18 +149,27 @@ const Address = () => {
             }
             {data && 
                 <Box>
-                    <Text fontSize='lg' fontWeight='semibold' mb={3} as='h2'>Recent Distributions</Text>
-                    <VStack align='stretch' spacing={4}>
-                        {data && data.distributions.map(d => (
-                            <Box>
-                                <Text fontSize='sm' color='gray.500'>{format(d.date, 'yyyy-MM-dd HH:mm')}</Text>
-                                <HStack>
-                                    <Link isExternal href={`https://wavesexplorer.com/tx/${d.txId}`}>{d.totalAmount} WAVES <Icon as={ExternalLinkIcon}/></Link> 
-                                </HStack>
-                            </Box>
-                        ))}
-
-                    </VStack>
+                    <Text fontSize='lg' fontWeight='semibold' mb={3} as='h2'>Last 20 Distributions</Text>
+                    <TableContainer>
+                        <Table>
+                            <Thead>
+                                <Tr>
+                                    <Th>Date</Th>
+                                    <Th>Amount</Th>
+                                    <Th>Distributor</Th>
+                                </Tr>
+                            </Thead>
+                            <Tbody>
+                                {data.distributions.map(d => (
+                                    <LinkBox as={Tr} _hover={{ bgColor: 'gray.100', cursor: 'pointer' }}>
+                                        <Td><LinkOverlay href={`https://wavesexplorer.com/tx/${d.txId}`} isExternal>{format(d.date, 'yyyy-MM-dd HH:mm')}</LinkOverlay></Td>
+                                        <Td>{d.totalAmount}</Td>
+                                        <Td>{d.distributor}</Td>
+                                    </LinkBox>
+                                ))}
+                            </Tbody>
+                        </Table>
+                    </TableContainer>
                 </Box>
             }
 		</VStack>

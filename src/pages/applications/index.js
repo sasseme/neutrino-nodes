@@ -1,11 +1,11 @@
 import { create } from '@waves/node-api-js'
 import { useQuery } from 'react-query'
 import { differenceInMilliseconds, compareAsc, format, intervalToDuration, minutesToMilliseconds } from 'date-fns'
-import { Icon, TableContainer, Thead, Td, Th, Tbody, Tr, Table, Box, Text, SimpleGrid, Stat, StatLabel, StatNumber, VStack, StackDivider, LinkBox, LinkOverlay } from '@chakra-ui/react'
+import { Link, Icon, TableContainer, Thead, Td, Th, Tbody, Tr, Table, Box, Text, SimpleGrid, Stat, StatLabel, StatNumber, VStack, StackDivider, LinkBox, LinkOverlay } from '@chakra-ui/react'
 import { useMemo } from 'react'
 import { useTable, useSortBy } from 'react-table'
-import { TriangleDownIcon, TriangleUpIcon } from '@chakra-ui/icons'
-import { Link } from 'react-router-dom'
+import { InfoIcon, TriangleDownIcon, TriangleUpIcon } from '@chakra-ui/icons'
+
 
 const AVAILABLE_SPOTS = 80
 
@@ -89,7 +89,12 @@ const Applications = () => {
                 <Box>
                     <Text fontSize='2xl' as='h1' fontWeight='semibold' mb={3}>Applicants</Text>
                     {error && <Text>Could not load data</Text>}
-                    {data && <Text>As of {format(data.current, 'yyyy-MM-dd, HH:mm')}</Text>}
+                    {data && 
+                        <>
+                            <Text>As of {format(data.current, 'yyyy-MM-dd, HH:mm')}</Text>
+                            <Text mt={2} fontSize='sm' color='gray.700'><Icon as={InfoIcon} color='blue.500'/> All spots have been filled. Unselected nodes can get their deposit back using the <Link href='https://waves-dapp.com/3P9vKqQKjUdmpXAfiWau8krREYAY1Xr69pE#returnDeposit' textDecoration='underline'>returnDeposit function</Link></Text>
+                        </>
+                    }
                     {memoData.length > 0 &&
                         <SimpleGrid columns={[1, null, 4]} spacing={[1, null, 5]} mt={2}>
                             <Stat>

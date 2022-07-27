@@ -1,13 +1,16 @@
 import { create } from '@waves/node-api-js'
 import { useQuery } from 'react-query'
-import { Icon, TableContainer, Thead, Td, Th, Tbody, Tr, Table, Box, Text, VStack, StackDivider, LinkBox, LinkOverlay, SimpleGrid, Stat, StatLabel, StatNumber } from '@chakra-ui/react'
+import { Icon, TableContainer, Thead, Td, Th, Tbody, Tr, Table, Box, Text, VStack, StackDivider, Link, LinkBox, LinkOverlay, SimpleGrid, Stat, StatLabel, StatNumber, TableCaption } from '@chakra-ui/react'
 import { useMemo } from 'react'
 import { useTable, useSortBy } from 'react-table'
-import { TriangleDownIcon, TriangleUpIcon } from '@chakra-ui/icons'
-import { Link } from 'react-router-dom'
+import { TriangleDownIcon, TriangleUpIcon, WarningIcon, WarningTwoIcon } from '@chakra-ui/icons'
+import { Link as RouterLink } from 'react-router-dom'
 import _ from 'lodash'
 import BigNumber from 'bignumber.js'
-import { compareAsc, format, minutesToMilliseconds } from 'date-fns'
+import { compareAsc, format, hoursToMilliseconds, minutesToMilliseconds } from 'date-fns'
+
+const ONE_DAY_MS = hoursToMilliseconds(24)
+const EIGHTEEN_HR_MS = hoursToMilliseconds(18)
 
 const toDisplay = (num) => {
     return new BigNumber(num).div(Math.pow(10, 8)).toNumber()
@@ -18,8 +21,10 @@ const statFont = ['md', null, '2xl']
 const api = create('https://nodes.wavesnodes.com')
 
 const blockDateSort = (a, b, id, desc) => {
-	const dateA = a.original[id].timestamp
-	const dateB = b.original[id].timestamp
+	const dateA = a.original[id]?.timestamp
+	const dateB = b.original[id]?.timestamp
+    if(!dateA) return -1
+    if(!dateB) return 1
 	return compareAsc(dateA, dateB)
 }
 
@@ -53,9 +58,17 @@ const Mining = () => {
             return total.plus(block.totalEarned)
         }, new BigNumber(0)).toNumber()
         const blocksByAddress = _.groupBy(byProgram, (header) => header.generator)
+
+        addresses.forEach(address => {
+            if(!blocksByAddress[address]) {
+                blocksByAddress[address] = []
+            }
+        })
+
         const totalBlocks = byProgram.length
+        const current = Date.now()
         const addressData = _.map(blocksByAddress, (val, key) => {
-            const lastBlock = val[0]
+            const lastBlock = val?.[0]
             const totalMined = val.reduce((total, block) => {
                 return total.plus(block.totalEarned)
             }, new BigNumber(0)).toNumber()
@@ -66,7 +79,8 @@ const Mining = () => {
                 lastBlock,
                 totalMined,
                 commission,
-                numBlocks
+                numBlocks,
+                timeSinceLastBlock: lastBlock ? current - lastBlock.timestamp : ONE_DAY_MS
             }
         })
 
@@ -75,8 +89,8 @@ const Mining = () => {
             totalWavesMined,
             addressData,
             totalAddresses: addresses.size,
-            totalWithBlock: addressData.length,
-            current: Date.now()
+            totalWithBlock: _.countBy(addressData, (val) => val.numBlocks > 0 ? 'generating' : 'nongenerating').generating,
+            current
         }
 	}, { staleTime: minutesToMilliseconds(30), refetchInterval: minutesToMilliseconds(10) })
 
@@ -86,11 +100,24 @@ const Mining = () => {
 
 	const columns = useMemo(() => {
 		return [
-            { Header: 'Node', accessor: 'node', disableSortBy: true },
+            {
+                Header: 'Node',
+                accessor: 'node',
+                disableSortBy: true, 
+                Cell: ({ value, row }) => {
+                    const timeDiff = row.original.timeSinceLastBlock
+                    if(timeDiff >= ONE_DAY_MS) {
+                        return <><Icon as={WarningTwoIcon} color='red.500'/> {value}</>
+                    } else if(timeDiff >= EIGHTEEN_HR_MS) {
+                        return <><Icon as={WarningIcon} color='yellow.500'/> {value}</>
+                    }
+                    return value
+                }
+            },
             { Header: 'Waves Mined', accessor: 'totalMined', Cell: ({ value }) => toDisplay(value) },
             { Header: 'Owner Commission', accessor: 'commission', Cell: ({ value }) => toDisplay(value) },
             { Header: 'Blocks', accessor: 'numBlocks' },
-            { Header: 'Last Block At', sortType: blockDateSort, accessor: 'lastBlock', Cell: ({ value }) => `${format(value.timestamp, 'yyyy-MM-dd, HH:mm')}` }
+            { Header: 'Last Block At', sortType: blockDateSort, accessor: 'lastBlock', Cell: ({ value }) => value?.timestamp ? `${format(value.timestamp, 'yyyy-MM-dd, HH:mm')}` : 'More than 24hr ago' }
 		]
 	}, [])
 	
@@ -130,42 +157,55 @@ const Mining = () => {
                     }
                 </Box>
                 {data &&
-                    <TableContainer>
-                        <Table variant='simple'>
-                            <Thead>
-                                {headerGroups.map(headerGroup => (
-                                    <Tr>
-                                        {headerGroup.headers.map(column => (
-                                            <Th {...column.getHeaderProps(column.getSortByToggleProps())}>
-                                                {column.render('Header')}
-                                                <span>
-                                                    {column.isSorted
-                                                    ? column.isSortedDesc
-                                                        ? <Icon ml={2} as={TriangleDownIcon}/>
-                                                        : <Icon ml={2} as={TriangleUpIcon}/>
-                                                    : ''}
-                                                </span>
-                                            </Th>
-                                        ))}
-                                    </Tr>
-                                ))}
-                            </Thead>
-                            <Tbody>
-                                {rows.map(
-                                    (row, i) => {
-                                        prepareRow(row)
-                                        return (
-                                            <LinkBox as={Tr} _hover={{ bgColor: 'gray.100', cursor: 'pointer' }}>
-                                                {row.cells.map(cell => (
-                                                    <Td><LinkOverlay as={Link} to={`/nodes/${row.original.node}`}>{cell.render('Cell')}</LinkOverlay></Td>
-                                                ))}
-                                            </LinkBox>
-                                        )
-                                    }
-                                )}
-                            </Tbody>
-                        </Table>
-                    </TableContainer>
+                    <>
+                        <TableContainer>
+                            <Table variant='simple'>
+                                <Thead>
+                                    {headerGroups.map(headerGroup => (
+                                        <Tr>
+                                            {headerGroup.headers.map(column => (
+                                                <Th {...column.getHeaderProps(column.getSortByToggleProps())}>
+                                                    {column.render('Header')}
+                                                    <span>
+                                                        {column.isSorted
+                                                        ? column.isSortedDesc
+                                                            ? <Icon ml={2} as={TriangleDownIcon}/>
+                                                            : <Icon ml={2} as={TriangleUpIcon}/>
+                                                        : ''}
+                                                    </span>
+                                                </Th>
+                                            ))}
+                                        </Tr>
+                                    ))}
+                                </Thead>
+                                <Tbody>
+                                    {rows.map(
+                                        (row, i) => {
+                                            prepareRow(row)
+                                            return (
+                                                <LinkBox as={Tr} _hover={{ bgColor: 'gray.100', cursor: 'pointer' }}>
+                                                    {row.cells.map(cell => (
+                                                        <Td><LinkOverlay as={RouterLink} to={`/nodes/${row.original.node}`}>{cell.render('Cell')}</LinkOverlay></Td>
+                                                    ))}
+                                                </LinkBox>
+                                            )
+                                        }
+                                    )}
+                                </Tbody>
+                                
+                            </Table>
+                        </TableContainer>
+                        <Box fontSize='sm' color='gray.700' mt={3}>
+                            <Box>
+                                <Icon as={WarningTwoIcon} color='red.500'/> = More than 24 hours since last block
+                            </Box>
+                            <Box>
+                                <Icon as={WarningIcon} color='yellow.500'/> = More than 18 hours since last block
+                            </Box>
+                            <Text>If your node has a symbol next to it, make sure to check that it is running properly and attempting to generate blocks with <Link isExternal href='https://docs.waves.tech/en/waves-node/block-generation-faq' textDecoration='underline'>these steps</Link></Text>
+                        </Box>
+                    </>
+                    
                 }
             </VStack>
 		</>

@@ -1,6 +1,6 @@
 import { create } from '@waves/node-api-js'
 import { useQuery } from 'react-query'
-import { Icon, TableContainer, Thead, Td, Th, Tbody, Tr, Table, Box, Text, VStack, StackDivider, LinkBox, LinkOverlay } from '@chakra-ui/react'
+import { Icon, TableContainer, Thead, Td, Th, Tbody, Tr, Table, Box, Text, VStack, StackDivider, LinkBox, LinkOverlay, SimpleGrid, Stat, StatLabel, StatNumber } from '@chakra-ui/react'
 import { useMemo } from 'react'
 import { useTable, useSortBy } from 'react-table'
 import { TriangleDownIcon, TriangleUpIcon } from '@chakra-ui/icons'
@@ -8,6 +8,8 @@ import { Link } from 'react-router-dom'
 import _ from 'lodash'
 import BigNumber from 'bignumber.js'
 import { format, minutesToMilliseconds } from 'date-fns'
+
+const statFont = ['md', null, '2xl']
 
 const toDisplay = (num) => {
     return new BigNumber(num).div(Math.pow(10, 8)).toNumber()
@@ -58,8 +60,15 @@ const Nodes = () => {
             }
         })
 
+        const totalLeased = nodes.reduce((total, cur) => total.plus(cur.leaseAmount), new BigNumber(0))
+        const totalDistributed = nodes.reduce((total, cur) => total.plus(cur.totalMined), new BigNumber(0))
+        const totalCommission = nodes.reduce((total, cur) => total.plus(cur.commission), new BigNumber(0))
+
         return {
             nodes,
+            totalLeased,
+            totalDistributed,
+            totalCommission,
             current: Date.now()
         }
 	}, { staleTime: minutesToMilliseconds(30), refetchInterval: minutesToMilliseconds(10) })
@@ -92,6 +101,22 @@ const Nodes = () => {
                     {error && <Text>Could not load data</Text>}
                     {(!error && memoData.length === 0) && <Text>Loading...</Text>}
                     {data && <Text>As of {format(data.current, 'yyyy-MM-dd, HH:mm')}</Text>}
+                    {memoData.length > 0 &&
+                        <SimpleGrid columns={[1, null, 4]} spacing={[1, null, 5]} mt={2}>
+                            <Stat>
+                                <StatLabel>Total Waves Leased</StatLabel>
+                                <StatNumber fontSize={statFont}>{toDisplay(data.totalLeased)}</StatNumber>
+                            </Stat>
+                            <Stat>
+                                <StatLabel>Total Waves Distributed</StatLabel>
+                                <StatNumber fontSize={statFont}>{toDisplay(data.totalDistributed)}</StatNumber>
+                            </Stat>
+                            <Stat>
+                                <StatLabel>Total Waves Earned by Node Owners</StatLabel>
+                                <StatNumber fontSize={statFont}>{toDisplay(data.totalCommission)}</StatNumber>
+                            </Stat>
+                        </SimpleGrid>
+                    }
                 </Box>
                 {memoData.length > 0 &&
                     <TableContainer>
